@@ -1,16 +1,17 @@
 package controller
 
 import (
-	"github.com/labstack/echo/v4"
-	"go.mongodb.org/mongo-driver/mongo"
-	"jwt-auth.com/Password"
-	"jwt-auth.com/models"
-	"jwt-auth.com/types"
-	//"go.mongodb.org/mongo-driver/mongo/options"
 	"context"
+	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"jwt-auth.com/Password"
 	"jwt-auth.com/database"
+	"jwt-auth.com/models"
+	"jwt-auth.com/token"
+	"jwt-auth.com/types"
 	"net/http"
 	"time"
 )
@@ -63,6 +64,30 @@ func Login(c echo.Context) error {
 	if !check {
 		return c.JSON(http.StatusInternalServerError, "failed to verify password")
 	}
+
+	//generate token
+	token, refreshtoken, err := token.Generatetokens(userdata.Email, userdata.User_name, userdata.User_id)
+	//update document
+	userdata.Token = &token
+	userdata.Refresh_token = &refreshtoken
+	userdata.Updated_at = time.Now()
+
+	ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	filter := bson.M{"email": userdata.Email}
+	upsert := true
+	opt := options.UpdateOptions{
+		Upsert: &upsert,
+	}
+
+	JwtCollection.UpdateOne(
+		ctx,
+		filter,
+		bson.D{
+			{"$set", userdata},
+		},
+		&opt,
+	)
+	defer cancel()
 
 	return c.JSON(http.StatusOK, "user log in")
 }

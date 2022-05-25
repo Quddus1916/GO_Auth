@@ -11,6 +11,7 @@ func Initconfig() types.Config {
 	var config types.Config
 	config.Port = os.Getenv("PORT")
 	config.MongoUrl = os.Getenv("MONGOURL")
+	config.SecretKey = os.Getenv("SECRETKEY")
 
 	return config
 
