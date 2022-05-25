@@ -15,5 +15,10 @@ func Encrypt(password string) string {
 }
 
 func Verifypassword(givenpassword string, storedpassword string) bool {
-	return true
+	flag := true
+	err := bcrypt.CompareHashAndPassword([]byte(storedpassword), []byte(givenpassword))
+	if err != nil {
+		flag = false
+	}
+	return flag
 }

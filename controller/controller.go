@@ -8,6 +8,7 @@ import (
 	"jwt-auth.com/types"
 	//"go.mongodb.org/mongo-driver/mongo/options"
 	"context"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"jwt-auth.com/database"
 	"net/http"
@@ -43,12 +44,25 @@ func Register(c echo.Context) error {
 func Login(c echo.Context) error {
 	//declare
 	var user = new(types.LoginUser)
+	var userdata = new(models.User)
 	//get login details to user
 	if err := c.Bind(user); err != nil {
 		return c.JSON(http.StatusBadRequest, "binding login failed")
 	}
+	//get the password from db
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	err := JwtCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(userdata)
+	defer cancel()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	//check password before giving token
+	check := Password.Verifypassword(user.Password, userdata.Password)
+	if !check {
+		return c.JSON(http.StatusInternalServerError, "failed to verify password")
+	}
 
 	return c.JSON(http.StatusOK, "user log in")
 }
